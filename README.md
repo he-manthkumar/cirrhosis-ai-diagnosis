@@ -1,4 +1,3 @@
-```markdown
 # AI-Powered Diagnosis of Cirrhosis Through Medical Data Analytics and Machine Learning
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
