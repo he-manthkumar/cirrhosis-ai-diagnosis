@@ -20,7 +20,7 @@ training_status = {
 
 class TrainingRequest(BaseModel):
     """Request schema for training."""
-    data_path: str = "data/raw/cirrhosis.csv"
+    data_path: str = "data/processed/cirrhosis_cleaned.csv"
 
 
 class TrainingResponse(BaseModel):

@@ -21,17 +21,25 @@ def main():
     print("CIRRHOSIS AI DIAGNOSIS - MODEL TRAINING")
     print("=" * 60)
     
-    # Check if preprocessed data exists
-    processed_path = Path("data/processed/cirrhosis_cleaned.csv")
-    raw_path = Path("data/raw/cirrhosis.csv")
+    # Check if preprocessed data exists (try multiple possible paths)
+    possible_paths = [
+        project_root / "data" / "processed" / "cirrhosis_cleaned.csv",
+        Path(r"D:\Finalyearproject\cirrhosis-ai-diagnosis\data\processed\cirrhosis_cleaned.csv"),
+        Path(r"cirrhosis-ai-diagnosis\data\processed\cirrhosis_cleaned.csv"),
+    ]
     
-    if processed_path.exists():
-        data_path = str(processed_path)
-        print(f"\n✓ Using preprocessed data: {data_path}")
-    else:
-        data_path = str(raw_path)
-        print(f"\n⚠ Preprocessed data not found. Using raw data: {data_path}")
-        print("  Tip: Run 'python -m scripts.preprocess_data' first for better results.")
+    data_path = None
+    for path in possible_paths:
+        if path.exists():
+            data_path = str(path)
+            print(f"\n✓ Using preprocessed data: {data_path}")
+            break
+    
+    if data_path is None:
+        print("\n❌ Error: Preprocessed data not found!")
+        print("   Please run the preprocessing notebook first.")
+        print("   Expected location: data/processed/cirrhosis_cleaned.csv")
+        sys.exit(1)
     
     print("\nTraining Interpretable Stacked Ensemble...")
     print("\nArchitecture:")
@@ -44,21 +52,37 @@ def main():
     print("    - Logistic Regression")
     print("\n" + "-" * 60)
     
-    # Initialize and train
-    ml_service = MLService(model_dir="data/processed")
-    result = ml_service.train(data_path=data_path)
-    
+    # Initialize and train - models saved to backend/models/
+    model_dir = project_root / "backend" / "models"
+    ml_service = MLService(model_dir=str(model_dir))
+    result = ml_service.train(data_path=data_path, test_size=0.2)
+
     print("\n" + "=" * 60)
     print("TRAINING COMPLETED!")
     print("=" * 60)
-    print(f"\nResults:")
-    print(f"  - Training Accuracy: {result['accuracy']:.4f}")
-    print(f"  - Number of Samples: {result['n_samples']}")
+    
+    print(f"\n📊 Dataset Split:")
+    print(f"  - Training samples: {result['train_samples']}")
+    print(f"  - Test samples: {result['test_samples']} (held-out, never seen during training)")
     print(f"  - Number of Features: {result['n_features']}")
     print(f"  - Classes: {result['classes']}")
-    print(f"  - Base Models: {result['base_models']}")
-    print(f"\nModels saved to: data/processed/")
     
-
+    print(f"\n🎯 HONEST Test Set Performance (on unseen data):")
+    print(f"  ┌{'─'*40}┐")
+    print(f"  │ Ensemble Accuracy:  {result['test_accuracy']:.4f} ({result['test_accuracy']*100:.2f}%)      │")
+    print(f"  │ Ensemble Precision: {result['test_precision']:.4f}                │")
+    print(f"  │ Ensemble Recall:    {result['test_recall']:.4f}                │")
+    print(f"  │ Ensemble F1-Score:  {result['test_f1']:.4f}                │")
+    print(f"  │ Ensemble ROC-AUC:   {result['test_roc_auc']:.4f}                │")
+    print(f"  └{'─'*40}┘")
+    
+    print(f"\n📈 Base Model Test Accuracy:")
+    for name, metrics in result['test_base_metrics'].items():
+        print(f"  - {name}: {metrics['accuracy']:.4f} (F1: {metrics['f1']:.4f})")
+    
+    print(f"\n✓ Models saved to: backend/models/")
+    print(f"✓ Test data saved for notebook evaluation")
+    print("\n⚠️  These are REAL metrics on data the model never saw during training!")
+    
 if __name__ == "__main__":
     main()

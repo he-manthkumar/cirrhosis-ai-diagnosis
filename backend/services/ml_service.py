@@ -17,9 +17,10 @@ from typing import Dict, List, Tuple, Optional
 import joblib
 from pathlib import Path
 
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -38,13 +39,13 @@ class MLService:
     Interpretable Stacked Ensemble for Cirrhosis Patient Status Prediction.
     """
     
-    def __init__(self, model_dir: str = "data/processed"):
+    def __init__(self, model_dir: str = "backend/models"):
         self.model_dir = Path(model_dir)
         self.model_dir.mkdir(parents=True, exist_ok=True)
         
-        # Feature columns
+        # Feature columns (matching preprocessed data)
         self.numerical_features = [
-            'Age', 'Bilirubin', 'Cholesterol', 'Albumin', 'Copper',
+            'Age_Years', 'Bilirubin', 'Cholesterol', 'Albumin', 'Copper',
             'Alk_Phos', 'SGOT', 'Tryglicerides', 'Platelets', 'Prothrombin'
         ]
         self.categorical_features = [
@@ -94,7 +95,6 @@ class MLService:
                 max_depth=6,
                 learning_rate=0.1,
                 random_state=42,
-                use_label_encoder=False,
                 eval_metric='mlogloss'
             ),
             'lightgbm': LGBMClassifier(
@@ -157,12 +157,16 @@ class MLService:
         
         self.feature_names_ = feature_names
     
-    def train(self, data_path: str = "data/raw/cirrhosis.csv") -> Dict:
+    def train(self, data_path: str = "data/raw/cirrhosis.csv", test_size: float = 0.2) -> Dict:
         """
-        Train the stacked ensemble using cross-validation.
+        Train the stacked ensemble with proper train/test split.
+        
+        Args:
+            data_path: Path to the dataset
+            test_size: Fraction of data to hold out for testing (default: 20%)
         
         Returns:
-            Dict with training metrics and model info.
+            Dict with training AND test metrics for honest evaluation.
         """
         # Load data
         df = pd.read_csv(data_path)
@@ -176,30 +180,50 @@ class MLService:
         # Prepare data
         X, y = self._prepare_data(df)
         
+        # ============================================================
+        # CRITICAL: Proper Train/Test Split BEFORE any training!
+        # ============================================================
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42, stratify=y
+        )
+        
+        print(f"\n📊 Data Split:")
+        print(f"   Training set: {len(y_train)} samples ({100*(1-test_size):.0f}%)")
+        print(f"   Test set: {len(y_test)} samples ({100*test_size:.0f}%)")
+        print(f"   (Test set is NEVER seen during training)\n")
+        
+        # Save test indices for later evaluation
+        self.test_indices_ = {
+            'X_test': X_test,
+            'y_test': y_test
+        }
+        
         # Create base models
         self.base_models = self._create_base_models()
         
-        # Cross-validation for stacking
+        # Cross-validation for stacking (ON TRAINING DATA ONLY!)
         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         
         # Generate out-of-fold predictions for meta-model training
-        meta_features = np.zeros((X.shape[0], len(self.base_models) * len(self.classes_)))
+        meta_features_train = np.zeros((X_train.shape[0], len(self.base_models) * len(self.classes_)))
         
         col_idx = 0
+        train_metrics = {}
+        
         for name, model in self.base_models.items():
             print(f"Training {name}...")
             
-            # Get out-of-fold probability predictions
+            # Get out-of-fold probability predictions (on training data only)
             oof_proba = cross_val_predict(
-                model, X, y, cv=cv, method='predict_proba'
+                model, X_train, y_train, cv=cv, method='predict_proba'
             )
             
             # Store probabilities as meta-features
-            meta_features[:, col_idx:col_idx + len(self.classes_)] = oof_proba
+            meta_features_train[:, col_idx:col_idx + len(self.classes_)] = oof_proba
             col_idx += len(self.classes_)
             
-            # Fit model on full data for inference
-            model.fit(X, y)
+            # Fit model on TRAINING data only (not full data!)
+            model.fit(X_train, y_train)
         
         # Store decision tree reference
         self.decision_tree = self.base_models['decision_tree']
@@ -208,42 +232,82 @@ class MLService:
         print("Training meta-model (Logistic Regression)...")
         self.meta_model = LogisticRegression(
             max_iter=1000,
-            random_state=42,
-            multi_class='multinomial'
+            random_state=42
         )
-        self.meta_model.fit(meta_features, y)
+        self.meta_model.fit(meta_features_train, y_train)
         
-        # Calculate training accuracy
-        final_predictions = self.meta_model.predict(meta_features)
-        accuracy = (final_predictions == y).mean()
+        # ============================================================
+        # Evaluate on HELD-OUT TEST SET (honest evaluation!)
+        # ============================================================
+        print("\n🔍 Evaluating on held-out test set...")
+        
+        # Generate test meta-features
+        meta_features_test = np.zeros((X_test.shape[0], len(self.base_models) * len(self.classes_)))
+        col_idx = 0
+        test_base_metrics = {}
+        
+        for name, model in self.base_models.items():
+            # Predict on test set
+            test_proba = model.predict_proba(X_test)
+            test_pred = model.predict(X_test)
+            
+            meta_features_test[:, col_idx:col_idx + len(self.classes_)] = test_proba
+            col_idx += len(self.classes_)
+            
+            # Calculate test metrics for each base model
+            test_base_metrics[name] = {
+                'accuracy': accuracy_score(y_test, test_pred),
+                'f1': f1_score(y_test, test_pred, average='weighted')
+            }
+        
+        # Final ensemble prediction on test set
+        test_predictions = self.meta_model.predict(meta_features_test)
+        test_proba_ensemble = self.meta_model.predict_proba(meta_features_test)
+        
+        # Calculate honest test metrics
+        test_accuracy = accuracy_score(y_test, test_predictions)
+        test_precision = precision_score(y_test, test_predictions, average='weighted')
+        test_recall = recall_score(y_test, test_predictions, average='weighted')
+        test_f1 = f1_score(y_test, test_predictions, average='weighted')
+        test_roc_auc = roc_auc_score(y_test, test_proba_ensemble, multi_class='ovr', average='weighted')
         
         # Save models
         self._save_models()
         
+        # Save test data for notebook evaluation
+        joblib.dump(self.test_indices_, self.model_dir / 'test_data.pkl')
+        
         return {
-            'accuracy': accuracy,
-            'n_samples': len(y),
-            'n_features': X.shape[1],
+            'train_samples': len(y_train),
+            'test_samples': len(y_test),
+            'n_features': X_train.shape[1],
             'classes': self.classes_,
-            'base_models': list(self.base_models.keys())
+            'base_models': list(self.base_models.keys()),
+            # Honest test metrics
+            'test_accuracy': test_accuracy,
+            'test_precision': test_precision,
+            'test_recall': test_recall,
+            'test_f1': test_f1,
+            'test_roc_auc': test_roc_auc,
+            'test_base_metrics': test_base_metrics
         }
     
     def _save_models(self):
-        """Save trained models to disk."""
-        joblib.dump(self.base_models, self.model_dir / 'base_models.joblib')
-        joblib.dump(self.meta_model, self.model_dir / 'meta_model.joblib')
-        joblib.dump(self.preprocessor, self.model_dir / 'preprocessor.joblib')
-        joblib.dump(self.label_encoder, self.model_dir / 'label_encoder.joblib')
-        joblib.dump(self.feature_names_, self.model_dir / 'feature_names.joblib')
+        """Save trained models to disk as .pkl files."""
+        joblib.dump(self.base_models, self.model_dir / 'base_models.pkl')
+        joblib.dump(self.meta_model, self.model_dir / 'meta_model.pkl')
+        joblib.dump(self.preprocessor, self.model_dir / 'preprocessor.pkl')
+        joblib.dump(self.label_encoder, self.model_dir / 'label_encoder.pkl')
+        joblib.dump(self.feature_names_, self.model_dir / 'feature_names.pkl')
         print(f"Models saved to {self.model_dir}")
     
     def load_models(self):
         """Load trained models from disk."""
-        self.base_models = joblib.load(self.model_dir / 'base_models.joblib')
-        self.meta_model = joblib.load(self.model_dir / 'meta_model.joblib')
-        self.preprocessor = joblib.load(self.model_dir / 'preprocessor.joblib')
-        self.label_encoder = joblib.load(self.model_dir / 'label_encoder.joblib')
-        self.feature_names_ = joblib.load(self.model_dir / 'feature_names.joblib')
+        self.base_models = joblib.load(self.model_dir / 'base_models.pkl')
+        self.meta_model = joblib.load(self.model_dir / 'meta_model.pkl')
+        self.preprocessor = joblib.load(self.model_dir / 'preprocessor.pkl')
+        self.label_encoder = joblib.load(self.model_dir / 'label_encoder.pkl')
+        self.feature_names_ = joblib.load(self.model_dir / 'feature_names.pkl')
         self.decision_tree = self.base_models['decision_tree']
         self.classes_ = self.label_encoder.classes_.tolist()
         print("Models loaded successfully")
@@ -251,7 +315,7 @@ class MLService:
     def _patient_to_dataframe(self, patient: PatientInput) -> pd.DataFrame:
         """Convert PatientInput to DataFrame for prediction."""
         data = {
-            'Age': patient.age,
+            'Age_Years': patient.age,  # Map age to Age_Years
             'Sex': patient.sex.value,
             'Drug': patient.drug.value if patient.drug else None,
             'Ascites': patient.ascites.value,

@@ -27,12 +27,14 @@ def main():
     print("CIRRHOSIS AI DIAGNOSIS - MODEL EVALUATION")
     print("=" * 70)
     
-    # Initialize ML service
-    ml_service = MLService(model_dir="data/processed")
+    # Initialize ML service with correct model directory
+    model_dir = project_root / "backend" / "models"
+    ml_service = MLService(model_dir=str(model_dir))
     
-    # Load and prepare data
+    # Load preprocessed data
     print("\nLoading data...")
-    df = pd.read_csv("data/raw/cirrhosis.csv")
+    data_path = project_root / "data" / "processed" / "cirrhosis_cleaned.csv"
+    df = pd.read_csv(data_path)
     df = df.drop(columns=['ID', 'N_Days'], errors='ignore')
     df = df.dropna(subset=['Status'])
     
@@ -116,7 +118,7 @@ def main():
     
     # Train and evaluate meta-model with CV
     from sklearn.linear_model import LogisticRegression
-    meta_model = LogisticRegression(max_iter=1000, random_state=42, multi_class='multinomial')
+    meta_model = LogisticRegression(max_iter=1000, random_state=42)
     
     y_pred_ensemble = cross_val_predict(meta_model, meta_features, y_encoded, cv=cv)
     y_proba_ensemble = cross_val_predict(meta_model, meta_features, y_encoded, cv=cv, method='predict_proba')
