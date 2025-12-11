@@ -315,7 +315,7 @@ class MLService:
     def _patient_to_dataframe(self, patient: PatientInput) -> pd.DataFrame:
         """Convert PatientInput to DataFrame for prediction."""
         data = {
-            'Age_Years': patient.age,  # Map age to Age_Years
+            'Age_Years': patient.age / 365.25,  # Convert age from days to years
             'Sex': patient.sex.value,
             'Drug': patient.drug.value if patient.drug else None,
             'Ascites': patient.ascites.value,
