@@ -15,4 +15,4 @@ catboost==1.2.5
 joblib==1.3.2
 pydantic==2.5.0
 python-dotenv==1.0.0
-google-generativeai==0.8.3
+openai>=1.0.0

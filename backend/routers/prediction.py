@@ -68,7 +68,7 @@ def get_llm_service() -> LLMService:
     """Dependency to get LLM service."""
     global llm_service
     if llm_service is None:
-        llm_service = LLMService(provider="gemini")
+        llm_service = LLMService(provider="openai")
     return llm_service
 
 
@@ -110,7 +110,7 @@ async def explain_prediction(
     This endpoint:
     1. Makes a prediction using the ensemble
     2. Extracts decision rules from the interpretable Decision Tree
-    3. Optionally generates a clinical narrative using Gemini LLM
+    3. Optionally generates a clinical narrative using OpenAI LLM
     4. Optionally analyzes external symptom image (lower weightage)
     
     Args:
@@ -162,7 +162,7 @@ async def predict_with_explanation(
     This is the main endpoint for the complete "Predict and Explain" workflow.
     Supports optional image input for external symptom analysis.
     
-    The image (if provided) will be analyzed by Gemini and integrated into
+    The image (if provided) will be analyzed by OpenAI and integrated into
     the narrative with lower weightage (~20%) compared to clinical data (~80%).
     """
     try:
@@ -228,7 +228,7 @@ async def analyze_external_symptoms(
     if not llm_svc.is_configured():
         raise HTTPException(
             status_code=503,
-            detail="LLM service not configured. Please set GEMINI_API_KEY in environment."
+            detail="LLM service not configured. Please set OPENAI_API_KEY in environment."
         )
     
     try:

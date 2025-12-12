@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cirrhosis AI Diagnosis</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <h1>Cirrhosis AI Diagnosis</h1>
+            </div>
+            <p class="subtitle">AI-Powered Liver Disease Prediction & Explanation System</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Form -->
+            <section class="input-section">
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        Patient Information
+                    </h2>
+                    
+                    <form id="predictionForm">
+                        <!-- Demographics -->
+                        <div class="form-group-title">Demographics</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="age">Age (days)</label>
+                                <input type="number" id="age" name="age" value="21464" required>
+                                <small>Patient age in days (e.g., 21464 ≈ 58.8 years)</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="sex">Sex</label>
+                                <select id="sex" name="sex" required>
+                                    <option value="F">Female</option>
+                                    <option value="M">Male</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="drug">Drug Treatment</label>
+                                <select id="drug" name="drug" required>
+                                    <option value="D-penicillamine">D-penicillamine</option>
+                                    <option value="Placebo">Placebo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="stage">Disease Stage</label>
+                                <select id="stage" name="stage" required>
+                                    <option value="1">Stage 1</option>
+                                    <option value="2">Stage 2</option>
+                                    <option value="3">Stage 3</option>
+                                    <option value="4" selected>Stage 4</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Lab Values -->
+                        <div class="form-group-title">Laboratory Values</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bilirubin">Bilirubin (mg/dL)</label>
+                                <input type="number" id="bilirubin" name="bilirubin" step="0.01" value="14.5" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="albumin">Albumin (g/dL)</label>
+                                <input type="number" id="albumin" name="albumin" step="0.01" value="2.6" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="alk_phos">Alkaline Phosphatase (U/L)</label>
+                                <input type="number" id="alk_phos" name="alk_phos" step="0.01" value="1718" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="sgot">SGOT (U/mL)</label>
+                                <input type="number" id="sgot" name="sgot" step="0.01" value="137.95" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cholesterol">Cholesterol (mg/dL)</label>
+                                <input type="number" id="cholesterol" name="cholesterol" step="0.01" value="261">
+                            </div>
+                            <div class="form-group">
+                                <label for="tryglicerides">Triglycerides (mg/dL)</label>
+                                <input type="number" id="tryglicerides" name="tryglicerides" step="0.01" value="172">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="copper">Copper (µg/day)</label>
+                                <input type="number" id="copper" name="copper" step="0.01" value="156">
+                            </div>
+                            <div class="form-group">
+                                <label for="platelets">Platelets (per mL/1000)</label>
+                                <input type="number" id="platelets" name="platelets" step="0.01" value="190">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="prothrombin">Prothrombin Time (seconds)</label>
+                                <input type="number" id="prothrombin" name="prothrombin" step="0.01" value="12.2" required>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Signs -->
+                        <div class="form-group-title">Clinical Signs</div>
+                        <div class="form-row checkbox-row">
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="ascites" name="ascites" checked>
+                                    <span class="checkmark"></span>
+                                    Ascites
+                                </label>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hepatomegaly" name="hepatomegaly" checked>
+                                    <span class="checkmark"></span>
+                                    Hepatomegaly
+                                </label>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="spiders" name="spiders" checked>
+                                    <span class="checkmark"></span>
+                                    Spider Angiomas
+                                </label>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="edema" name="edema" checked>
+                                    <span class="checkmark"></span>
+                                    Edema
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Image Upload -->
+                        <div class="form-group-title">External Symptom Image (Optional)</div>
+                        <div class="image-upload-section">
+                            <div class="upload-area" id="uploadArea">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                <p>Drop image here or <span class="browse-link">browse</span></p>
+                                <small>Upload image showing external symptoms (jaundice, spider angiomas, etc.)</small>
+                                <input type="file" id="imageInput" accept="image/*" hidden>
+                            </div>
+                            <div class="image-preview" id="imagePreview" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview">
+                                <button type="button" class="remove-image" id="removeImage">×</button>
+                            </div>
+                            <p class="image-note">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="16" x2="12" y2="12"/>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                                Image findings are given ~20% weight compared to clinical data (~80%)
+                            </p>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="submit-btn" id="submitBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                            </svg>
+                            <span>Predict & Explain</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <!-- Prediction Result -->
+                <div class="card result-card" id="predictionCard">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        Prediction Result
+                    </h2>
+                    <div class="prediction-result">
+                        <div class="prediction-status" id="predictionStatus">
+                            <span class="status-label">Predicted Status:</span>
+                            <span class="status-value" id="statusValue">-</span>
+                        </div>
+                        <div class="confidence-meter">
+                            <span class="confidence-label">Confidence:</span>
+                            <div class="meter-container">
+                                <div class="meter-fill" id="confidenceFill"></div>
+                            </div>
+                            <span class="confidence-value" id="confidenceValue">-</span>
+                        </div>
+                        <div class="risk-level" id="riskLevel">
+                            <span class="risk-label">Risk Level:</span>
+                            <span class="risk-badge" id="riskBadge">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Probabilities -->
+                    <div class="probabilities">
+                        <h3>Class Probabilities</h3>
+                        <div class="prob-bars" id="probBars"></div>
+                    </div>
+
+                    <!-- Base Model Predictions -->
+                    <div class="base-models">
+                        <h3>Individual Model Predictions</h3>
+                        <div class="models-grid" id="modelsGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Explanation -->
+                <div class="card explanation-card">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        AI Explanation
+                    </h2>
+                    
+                    <!-- Narrative -->
+                    <div class="narrative-section" id="narrativeSection">
+                        <h3>Clinical Narrative</h3>
+                        <div class="narrative-text" id="narrativeText">
+                            <div class="loading-spinner"></div>
+                            <span>Generating explanation...</span>
+                        </div>
+                    </div>
+
+                    <!-- Decision Rules -->
+                    <div class="rules-section">
+                        <h3>Decision Rules</h3>
+                        <div class="rules-list" id="rulesList"></div>
+                    </div>
+
+                    <!-- Key Features -->
+                    <div class="features-section">
+                        <h3>Key Contributing Features</h3>
+                        <div class="features-grid" id="featuresGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Image Analysis -->
+                <div class="card image-analysis-card" id="imageAnalysisCard" style="display: none;">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        Image Analysis
+                        <span class="weight-badge">~20% weight</span>
+                    </h2>
+                    <div class="image-analysis-content" id="imageAnalysisContent"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="loading-spinner large"></div>
+                <p>Analyzing patient data...</p>
+                <small>This may take a few seconds</small>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Cirrhosis AI Diagnosis System • Powered by Stacked Ensemble ML + OpenAI GPT-4</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

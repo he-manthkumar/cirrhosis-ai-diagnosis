@@ -1,7 +1,7 @@
 """
 LLM Service - Integrates with LLM for narrative generation.
 
-This service handles communication with Google Gemini API
+This service handles communication with OpenAI API
 to generate human-readable clinical narratives from model explanations.
 Supports optional image input for external symptom assessment.
 """
@@ -9,13 +9,14 @@ import os
 import base64
 from typing import Optional
 from dotenv import load_dotenv
+from backend.utils.image_utils import validate_base64_image, get_image_info
 
 load_dotenv()
 
 
 class LLMService:
     """
-    Service for generating clinical narratives using Google Gemini.
+    Service for generating clinical narratives using OpenAI.
     
     Features:
     - Text-based narrative generation from model explanations
@@ -23,10 +24,10 @@ class LLMService:
     - Image findings are given lower weightage compared to clinical data
     """
     
-    def __init__(self, provider: str = "gemini"):
+    def __init__(self, provider: str = "openai"):
         self.provider = provider
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         
     async def generate_narrative(
         self, 
@@ -45,85 +46,86 @@ class LLMService:
         Returns:
             Generated narrative string
         """
-        if self.provider == "gemini":
-            return await self._generate_gemini(prompt, image_base64, image_mime_type)
+        if self.provider == "openai":
+            return await self._generate_openai(prompt, image_base64, image_mime_type)
         else:
             return self._generate_fallback(prompt)
     
-    async def _generate_gemini(
+    async def _generate_openai(
         self, 
         prompt: str, 
         image_base64: Optional[str] = None,
         image_mime_type: str = "image/jpeg"
     ) -> str:
-        """Generate using Google Gemini API with optional image input."""
+        """Generate using OpenAI API with optional image input."""
         try:
-            import google.generativeai as genai
+            from openai import AsyncOpenAI
             
-            genai.configure(api_key=self.gemini_api_key)
+            client = AsyncOpenAI(api_key=self.openai_api_key)
             
-            # Use vision model if image is provided
-            model_name = self.gemini_model
+            # System message for medical context
+            system_message = {
+                "role": "system",
+                "content": "You are a medical AI assistant that explains machine learning predictions to clinicians in clear, professional language."
+            }
+            
+            # Build the user message content
             if image_base64:
-                # Ensure we use a vision-capable model
-                if "flash" in model_name or "pro" in model_name:
-                    pass  # These models support vision
-                else:
-                    model_name = "gemini-1.5-flash"
+                # Validate image before sending
+                if not validate_base64_image(image_base64):
+                    print("Warning: Invalid base64 image, proceeding without image")
+                    image_base64 = None
             
-            model = genai.GenerativeModel(model_name)
-            
-            # Build the content parts
             if image_base64:
                 # Add image context with lower weightage instruction
                 image_prompt = self._build_image_prompt(prompt)
                 
-                # Decode base64 image
-                image_data = base64.b64decode(image_base64)
-                
-                # Create content with image
-                content = [
+                # Create content with image for vision model
+                user_content = [
                     {
-                        "mime_type": image_mime_type,
-                        "data": image_data
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime_type};base64,{image_base64}",
+                            "detail": "low"
+                        }
                     },
-                    image_prompt
+                    {
+                        "type": "text",
+                        "text": image_prompt
+                    }
                 ]
                 
-                response = await model.generate_content_async(
-                    content,
-                    generation_config=genai.GenerationConfig(
-                        max_output_tokens=400,
-                        temperature=0.3
-                    )
+                # Use vision-capable model
+                model = "gpt-4o-mini"
+                
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        system_message,
+                        {"role": "user", "content": user_content}
+                    ],
+                    max_tokens=400,
+                    temperature=0.3
                 )
             else:
                 # Text-only generation
-                system_instruction = (
-                    "You are a medical AI assistant that explains machine learning "
-                    "predictions to clinicians in clear, professional language."
-                )
-                
-                model = genai.GenerativeModel(
-                    model_name,
-                    system_instruction=system_instruction
-                )
-                
-                response = await model.generate_content_async(
-                    prompt,
-                    generation_config=genai.GenerationConfig(
-                        max_output_tokens=300,
-                        temperature=0.3
-                    )
+                response = await client.chat.completions.create(
+                    model=self.openai_model,
+                    messages=[
+                        system_message,
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=300,
+                    temperature=0.3
                 )
             
-            return response.text
+            return response.choices[0].message.content
             
         except ImportError:
-            print("google-generativeai package not installed. Run: pip install google-generativeai")
+            print("openai package not installed. Run: pip install openai")
             return self._generate_fallback(prompt)
         except Exception as e:
-            print(f"Gemini API error: {e}")
+            print(f"OpenAI API error: {e}")
             return self._generate_fallback(prompt)
     
     def _build_image_prompt(self, base_prompt: str) -> str:
@@ -173,8 +175,8 @@ Please integrate any relevant image observations into your clinical narrative, e
     
     def is_configured(self) -> bool:
         """Check if LLM service is properly configured."""
-        if self.provider == "gemini":
-            return bool(self.gemini_api_key)
+        if self.provider == "openai":
+            return bool(self.openai_api_key)
         return False
     
     async def analyze_image_only(
@@ -196,12 +198,19 @@ Please integrate any relevant image observations into your clinical narrative, e
             Dictionary with image analysis findings
         """
         try:
-            import google.generativeai as genai
+            # Validate image first
+            if not validate_base64_image(image_base64):
+                image_info = get_image_info(image_base64)
+                return {
+                    "success": False,
+                    "error": "Invalid or corrupted base64 image. Please provide a complete, valid image.",
+                    "analysis": None,
+                    "debug_info": image_info
+                }
             
-            genai.configure(api_key=self.gemini_api_key)
-            model = genai.GenerativeModel(self.gemini_model)
+            from openai import AsyncOpenAI
             
-            image_data = base64.b64decode(image_base64)
+            client = AsyncOpenAI(api_key=self.openai_api_key)
             
             analysis_prompt = """Analyze this medical image for signs that may be relevant to liver disease assessment.
 
@@ -222,25 +231,37 @@ For each finding, indicate:
 
 Respond in a structured format. If the image quality is poor or the relevant body part is not visible, indicate that."""
 
-            content = [
+            # Create content with image
+            user_content = [
                 {
-                    "mime_type": image_mime_type,
-                    "data": image_data
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{image_mime_type};base64,{image_base64}",
+                        "detail": "low"
+                    }
                 },
-                analysis_prompt
+                {
+                    "type": "text",
+                    "text": analysis_prompt
+                }
             ]
             
-            response = await model.generate_content_async(
-                content,
-                generation_config=genai.GenerationConfig(
-                    max_output_tokens=500,
-                    temperature=0.2
-                )
+            response = await client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a medical image analysis assistant. Analyze images for clinical signs relevant to liver disease."
+                    },
+                    {"role": "user", "content": user_content}
+                ],
+                max_tokens=500,
+                temperature=0.2
             )
             
             return {
                 "success": True,
-                "analysis": response.text,
+                "analysis": response.choices[0].message.content,
                 "note": "Image findings should be weighted lower than clinical data (approximately 20% weight)"
             }
             
