@@ -65,11 +65,12 @@ class PatientInput(BaseModel):
     platelets: Optional[float] = Field(None, description="Platelets per cubic ml/1000", ge=0)
     prothrombin: float = Field(..., description="Prothrombin time (seconds)", ge=0)
     
-    # Disease Stage
-    stage: Optional[int] = Field(None, description="Histologic stage (1-4)", ge=1, le=4)
+    # Disease Stage (0-4 accepted, model trained on 1-3)
+    stage: Optional[int] = Field(None, description="Histologic stage (0-4)", ge=0, le=4)
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "protected_namespaces": (),
+        "json_schema_extra": {
             "example": {
                 "age": 21464,
                 "sex": "F",
@@ -87,9 +88,10 @@ class PatientInput(BaseModel):
                 "tryglicerides": 172,
                 "platelets": 190,
                 "prothrombin": 12.2,
-                "stage": 4
+                "stage": 3
             }
         }
+    }
 
 
 class DecisionRule(BaseModel):

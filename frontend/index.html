@@ -62,13 +62,15 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="stage">Disease Stage</label>
+                                <label for="stage">Disease Stage (Histologic)</label>
                                 <select id="stage" name="stage" required>
-                                    <option value="1">Stage 1</option>
-                                    <option value="2">Stage 2</option>
-                                    <option value="3">Stage 3</option>
-                                    <option value="4" selected>Stage 4</option>
+                                    <option value="0">Stage 0 - No Fibrosis</option>
+                                    <option value="1">Stage 1 - Portal Fibrosis</option>
+                                    <option value="2">Stage 2 - Periportal Fibrosis</option>
+                                    <option value="3" selected>Stage 3 - Bridging Fibrosis</option>
+                                    <option value="4">Stage 4 - Cirrhosis</option>
                                 </select>
+                                <small>Based on liver biopsy findings</small>
                             </div>
                         </div>
 
