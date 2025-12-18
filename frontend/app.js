@@ -207,9 +207,9 @@ function displayPrediction(prediction) {
 
 function getStatusLabel(status) {
     const labels = {
-        'C': 'C - Censored (Survived)',
-        'CL': 'CL - Liver Transplant',
-        'D': 'D - Death'
+        'C': 'Stable – Low Mortality Risk',
+        'CL': 'Critical – High Mortality Risk',
+        'D': 'Death Imminent Without Intervention'
     };
     return labels[status] || status;
 }
@@ -217,20 +217,20 @@ function getStatusLabel(status) {
 function displayProbabilities(probabilities) {
     const probBars = document.getElementById('probBars');
     probBars.innerHTML = '';
-    
+
     const labels = {
-        'C': 'Censored (Survived)',
-        'CL': 'Liver Transplant',
-        'D': 'Death'
+        'C': 'Stable – Low Risk',
+        'CL': 'Critical – High Risk',
+        'D': 'Death Imminent Without Intervention'
     };
-    
+
     for (const [key, value] of Object.entries(probabilities)) {
         const percentage = (value * 100).toFixed(1);
-        
+
         const probItem = document.createElement('div');
         probItem.className = 'prob-item';
         probItem.innerHTML = `
-            <span class="prob-label">${key}</span>
+            <span class="prob-label">${labels[key]}</span>
             <div class="prob-bar-container">
                 <div class="prob-bar prob-${key}" style="width: ${percentage}%">
                     ${percentage}%
@@ -240,6 +240,7 @@ function displayProbabilities(probabilities) {
         probBars.appendChild(probItem);
     }
 }
+
 
 function displayBaseModels(models) {
     const modelsGrid = document.getElementById('modelsGrid');

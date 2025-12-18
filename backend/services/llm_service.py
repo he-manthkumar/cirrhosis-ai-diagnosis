@@ -66,7 +66,14 @@ class LLMService:
             # System message for medical context
             system_message = {
                 "role": "system",
-                "content": "You are a medical AI assistant that explains machine learning predictions to clinicians in clear, professional language."
+                "content": "You are a medical AI assistant generating clinical risk explanations. "
+                            "IMPORTANT RULES:\n"
+                            "- The patient is currently ALIVE.\n"
+                            "- Do NOT state or imply that the patient is dead.\n"
+                            "- Frame all explanations in terms of MORTALITY RISK and DISEASE SEVERITY.\n"
+                            "- Use phrases such as 'high risk of death without intervention' instead of 'death'.\n"
+                            "- The output is a prognostic explanation, NOT an outcome declaration.\n"
+                            "- Maintain a calm, professional, clinician-facing tone."
             }
             
             # Build the user message content
