@@ -101,7 +101,7 @@ async function submitPrediction() {
         const patientData = {
             age: parseInt(document.getElementById('age').value),
             sex: document.getElementById('sex').value,
-            drug: document.getElementById('drug').value,
+            drug: 'Placebo',  // Always Placebo - hardcoded
             stage: parseInt(document.getElementById('stage').value),
             bilirubin: parseFloat(document.getElementById('bilirubin').value),
             albumin: parseFloat(document.getElementById('albumin').value),
