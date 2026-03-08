@@ -4,6 +4,11 @@ Prediction Router - API endpoints for making predictions and getting explanation
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
+from sqlalchemy.orm import Session
+from backend.database import get_db
+from backend.models.db_models import PatientRecord
+from backend.models.patient import PatientHistoryResponse
+from typing import List
 
 from backend.models.patient import (
     PatientInput, 
@@ -15,7 +20,7 @@ from backend.services.explanation_service import ExplanationService
 from backend.services.llm_service import LLMService
 
 
-router = APIRouter(prefix="/predict", tags=["Prediction"])
+router = APIRouter(prefix="/predict", tags=["Prediction"])  
 
 # Service instances (will be properly initialized with dependency injection)
 ml_service: Optional[MLService] = None
@@ -154,31 +159,25 @@ async def predict_with_explanation(
     request: PredictWithImageRequest,
     ml_svc: MLService = Depends(get_ml_service),
     exp_svc: ExplanationService = Depends(get_explanation_service),
-    llm_svc: LLMService = Depends(get_llm_service)
+    llm_svc: LLMService = Depends(get_llm_service),
+    db: Session = Depends(get_db)  # <--- ADD THIS DB DEPENDENCY
 ):
     """
-    Get both prediction and explanation in a single request.
-    
-    This is the main endpoint for the complete "Predict and Explain" workflow.
-    Supports optional image input for external symptom analysis.
-    
-    The image (if provided) will be analyzed by OpenAI and integrated into
-    the narrative with lower weightage (~20%) compared to clinical data (~80%).
+    Get both prediction and explanation in a single request, and save to database.
     """
     try:
         patient = request.patient
         image_base64 = request.image.image_base64 if request.image else None
         image_mime_type = request.image.image_mime_type if request.image else "image/jpeg"
         
-        # Get prediction
+        # Get prediction & explanation
         prediction = ml_svc.predict(patient)
-        
-        # Get explanation
         explanation = exp_svc.generate_explanation(patient, prediction)
         
-        # Generate narrative with optional image
+        # Generate narrative
         prompt = exp_svc.generate_llm_prompt(patient, prediction, explanation)
         image_analysis = None
+        narrative_text = None
         
         if llm_svc.is_configured():
             narrative = await llm_svc.generate_narrative(
@@ -187,18 +186,31 @@ async def predict_with_explanation(
                 image_mime_type=image_mime_type
             )
             explanation.narrative = narrative
+            narrative_text = narrative
             
-            # If image was provided, also get standalone image analysis
             if image_base64:
                 image_analysis = await llm_svc.analyze_image_only(
                     image_base64,
                     image_mime_type
                 )
         
+        # --- NEW CODE: SAVE TO POSTGRESQL DATABASE ---
+        db_record = PatientRecord(
+            patient_name=patient.patient_name,
+            clinical_data=patient.model_dump(),
+            prediction=prediction["final_prediction"],
+            confidence=prediction["confidence"],
+            narrative=narrative_text
+        )
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+        # ---------------------------------------------
+        
         response = {
             "prediction": PredictionResponse(**prediction),
             "explanation": explanation,
-            "llm_prompt": prompt  # Include for debugging/transparency
+            "llm_prompt": prompt
         }
         
         if image_analysis:
@@ -207,6 +219,7 @@ async def predict_with_explanation(
         return response
         
     except Exception as e:
+        db.rollback() # Rollback in case of DB error
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -250,3 +263,18 @@ async def get_feature_importance(
         return {"feature_importance": importance}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/history/{patient_name}", response_model=List[PatientHistoryResponse])
+async def get_patient_history(
+    patient_name: str, 
+    db: Session = Depends(get_db)
+):
+    """Retrieve all past predictions for a specific patient."""
+    records = db.query(PatientRecord).filter(
+        PatientRecord.patient_name.ilike(f"%{patient_name}%")
+    ).order_by(PatientRecord.created_at.desc()).all()
+    
+    if not records:
+        raise HTTPException(status_code=404, detail="No records found for this patient")
+        
+    return records

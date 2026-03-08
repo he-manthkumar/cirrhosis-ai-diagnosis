@@ -4,7 +4,7 @@ Pydantic models for patient data and prediction responses.
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
-
+from datetime import datetime
 
 class StatusEnum(str, Enum):
     """Patient status outcomes."""
@@ -44,7 +44,10 @@ class PatientInput(BaseModel):
     # Demographics
     age: float = Field(..., description="Age in days", ge=0)
     sex: SexEnum = Field(..., description="Patient sex (M/F)")
-    
+    patient_name: str = Field(..., description="Full name of the patient")
+    age: float = Field(..., description="Age in days", ge=0)
+
+
     # Treatment
     drug: Optional[DrugEnum] = Field(None, description="Drug treatment")
     
@@ -156,3 +159,16 @@ class ExplanationResponse(BaseModel):
     tree_ensemble_agreement: bool = Field(
         ..., description="Whether tree prediction matches ensemble"
     )
+
+class PatientHistoryResponse(BaseModel):
+    """Schema for returning past patient records."""
+    id: int
+    patient_name: str
+    created_at: datetime
+    prediction: str
+    confidence: float
+    narrative: Optional[str] = None
+    clinical_data: dict
+
+    class Config:
+        from_attributes = True

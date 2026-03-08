@@ -26,20 +26,20 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupImageUpload() {
     // Click to upload
     uploadArea.addEventListener('click', () => imageInput.click());
-    
+
     // File selection
     imageInput.addEventListener('change', handleFileSelect);
-    
+
     // Drag and drop
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadArea.classList.add('dragover');
     });
-    
+
     uploadArea.addEventListener('dragleave', () => {
         uploadArea.classList.remove('dragover');
     });
-    
+
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
@@ -48,7 +48,7 @@ function setupImageUpload() {
             processImage(file);
         }
     });
-    
+
     // Remove image
     removeImageBtn.addEventListener('click', () => {
         selectedImageBase64 = null;
@@ -68,13 +68,13 @@ function handleFileSelect(e) {
 
 function processImage(file) {
     selectedImageMimeType = file.type;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         const dataUrl = e.target.result;
         // Extract base64 from data URL
         selectedImageBase64 = dataUrl.split(',')[1];
-        
+
         // Show preview
         previewImg.src = dataUrl;
         imagePreview.style.display = 'inline-block';
@@ -95,10 +95,11 @@ async function submitPrediction() {
     // Show loading
     loadingOverlay.classList.add('active');
     submitBtn.disabled = true;
-    
+
     try {
         // Gather form data
         const patientData = {
+            patient_name: document.getElementById('patient_name').value,
             age: parseInt(document.getElementById('age').value),
             sex: document.getElementById('sex').value,
             drug: 'Placebo',  // Always Placebo - hardcoded
@@ -117,12 +118,12 @@ async function submitPrediction() {
             spiders: document.getElementById('spiders').checked ? 'Y' : 'N',
             edema: document.getElementById('edema').checked ? 'Y' : 'N'
         };
-        
+
         // Build request
         const requestBody = {
             patient: patientData
         };
-        
+
         // Add image if selected
         if (selectedImageBase64) {
             requestBody.image = {
@@ -130,7 +131,7 @@ async function submitPrediction() {
                 image_mime_type: selectedImageMimeType
             };
         }
-        
+
         // Make API call
         const response = await fetch(`${API_BASE_URL}/predict/full`, {
             method: 'POST',
@@ -139,14 +140,14 @@ async function submitPrediction() {
             },
             body: JSON.stringify(requestBody)
         });
-        
+
         if (!response.ok) {
             throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
-        
+
         const result = await response.json();
         displayResults(result);
-        
+
     } catch (error) {
         console.error('Prediction error:', error);
         alert(`Error: ${error.message}`);
@@ -159,16 +160,16 @@ async function submitPrediction() {
 // Display Results
 function displayResults(result) {
     resultsSection.style.display = 'flex';
-    
+
     // Scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
+
     // Display prediction
     displayPrediction(result.prediction);
-    
+
     // Display explanation
     displayExplanation(result.explanation);
-    
+
     // Display image analysis if available
     if (result.image_analysis) {
         displayImageAnalysis(result.image_analysis);
@@ -182,25 +183,25 @@ function displayPrediction(prediction) {
     const confidenceFill = document.getElementById('confidenceFill');
     const confidenceValue = document.getElementById('confidenceValue');
     const riskBadge = document.getElementById('riskBadge');
-    
+
     // Status
     const status = prediction.final_prediction;
     statusValue.textContent = getStatusLabel(status);
     statusValue.className = `status-value status-${status}`;
-    
+
     // Confidence
     const confidence = (prediction.confidence * 100).toFixed(1);
     confidenceFill.style.width = `${confidence}%`;
     confidenceValue.textContent = `${confidence}%`;
-    
+
     // Risk Level
     const riskLevel = prediction.risk_level || 'Unknown';
     riskBadge.textContent = riskLevel;
     riskBadge.className = `risk-badge risk-${riskLevel.toLowerCase()}`;
-    
+
     // Probabilities
     displayProbabilities(prediction.probabilities);
-    
+
     // Base Models
     displayBaseModels(prediction.base_model_predictions);
 }
@@ -245,10 +246,10 @@ function displayProbabilities(probabilities) {
 function displayBaseModels(models) {
     const modelsGrid = document.getElementById('modelsGrid');
     modelsGrid.innerHTML = '';
-    
+
     models.forEach(model => {
         const confidence = (model.confidence * 100).toFixed(1);
-        
+
         const modelCard = document.createElement('div');
         modelCard.className = 'model-card';
         modelCard.innerHTML = `
@@ -286,10 +287,10 @@ function displayExplanation(explanation) {
         narrativeText.innerHTML = '<em>Narrative generation unavailable. Please check API configuration.</em>';
         narrativeText.classList.remove('loading');
     }
-    
+
     // Decision Rules
     displayRules(explanation.rule_path);
-    
+
     // Key Features
     displayFeatures(explanation.key_features);
 }
@@ -297,12 +298,12 @@ function displayExplanation(explanation) {
 function displayRules(rules) {
     const rulesList = document.getElementById('rulesList');
     rulesList.innerHTML = '';
-    
+
     if (!rules || rules.length === 0) {
         rulesList.innerHTML = '<p class="no-data">No decision rules available</p>';
         return;
     }
-    
+
     rules.forEach((rule, index) => {
         const ruleItem = document.createElement('div');
         ruleItem.className = 'rule-item';
@@ -317,18 +318,18 @@ function displayRules(rules) {
 function displayFeatures(features) {
     const featuresGrid = document.getElementById('featuresGrid');
     featuresGrid.innerHTML = '';
-    
+
     if (!features || Object.keys(features).length === 0) {
         featuresGrid.innerHTML = '<p class="no-data">No feature information available</p>';
         return;
     }
-    
+
     for (const [name, data] of Object.entries(features)) {
         const featureCard = document.createElement('div');
         featureCard.className = 'feature-card';
-        
+
         const statusClass = data.status.replace(' ', '-').toLowerCase();
-        
+
         featureCard.innerHTML = `
             <div class="feature-name">${name}</div>
             <div class="feature-value">${data.formatted}</div>
@@ -342,7 +343,7 @@ function displayFeatures(features) {
 function displayImageAnalysis(imageAnalysis) {
     const imageAnalysisCard = document.getElementById('imageAnalysisCard');
     const imageAnalysisContent = document.getElementById('imageAnalysisContent');
-    
+
     if (imageAnalysis.success && imageAnalysis.analysis) {
         imageAnalysisCard.style.display = 'block';
         imageAnalysisContent.textContent = imageAnalysis.analysis;
@@ -353,3 +354,43 @@ function displayImageAnalysis(imageAnalysis) {
         imageAnalysisCard.style.display = 'none';
     }
 }
+
+// History Search Functionality
+const searchHistoryBtn = document.getElementById('searchHistoryBtn');
+const searchNameInput = document.getElementById('search_name');
+const historyResults = document.getElementById('historyResults');
+
+searchHistoryBtn.addEventListener('click', async () => {
+    const name = searchNameInput.value.trim();
+    if (!name) return alert('Please enter a name to search');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/predict/history/${encodeURIComponent(name)}`);
+
+        if (response.status === 404) {
+            historyResults.style.display = 'block';
+            historyResults.innerHTML = '<p>No records found for this patient.</p>';
+            return;
+        }
+
+        if (!response.ok) throw new Error('Failed to fetch history');
+
+        const records = await response.json();
+
+        historyResults.style.display = 'block';
+        historyResults.innerHTML = records.map(record => `
+            <div style="border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                <strong>Date:</strong> ${new Date(record.created_at + 'Z').toLocaleString()}<br>
+                <strong>Prediction:</strong> ${getStatusLabel(record.prediction)} (${(record.confidence * 100).toFixed(1)}% confidence)<br>
+                <strong>Clinical Notes:</strong> ${record.narrative ? record.narrative.substring(0, 150) + '...' : 'N/A'}
+                <details style="margin-top: 0.5rem;">
+                    <summary style="cursor: pointer; color: #0066cc;">View Full Input Data</summary>
+                    <pre style="background: #f5f5f5; padding: 0.5rem; font-size: 0.85rem; margin-top: 0.5rem;">${JSON.stringify(record.clinical_data, null, 2)}</pre>
+                </details>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        alert('Error fetching history: ' + error.message);
+    }
+});

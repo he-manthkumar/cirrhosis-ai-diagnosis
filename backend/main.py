@@ -11,7 +11,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.routers import prediction_router, training_router
+from backend.database import engine
+from backend.models import db_models
 
+db_models.Base.metadata.create_all(bind=engine)
+
+from backend.routers import prediction_router, training_router
 
 # Create FastAPI app
 app = FastAPI(
