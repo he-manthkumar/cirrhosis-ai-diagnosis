@@ -136,6 +136,9 @@ celerybeat.pid
 
 # Environments
 .env
+run_commands.txt
+test_request.json
+dummy.py
 .envrc
 .venv
 env/
