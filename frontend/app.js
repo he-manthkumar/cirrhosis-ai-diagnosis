@@ -1,5 +1,6 @@
 // API Configuration
 const API_BASE_URL = 'http://127.0.0.1:8000';
+const TOKEN_KEY = 'cirrhosis_auth_token';
 
 // DOM Elements
 const form = document.getElementById('predictionForm');
@@ -11,6 +12,7 @@ const imageInput = document.getElementById('imageInput');
 const imagePreview = document.getElementById('imagePreview');
 const previewImg = document.getElementById('previewImg');
 const removeImageBtn = document.getElementById('removeImage');
+const profileBtn = document.getElementById('profileBtn');
 
 // State
 let selectedImageBase64 = null;
@@ -18,9 +20,34 @@ let selectedImageMimeType = 'image/jpeg';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    ensureAuthenticated();
+    if (profileBtn) {
+        profileBtn.addEventListener('click', () => {
+            window.location.href = '/profile';
+        });
+    }
     setupImageUpload();
     setupFormSubmission();
 });
+
+function ensureAuthenticated() {
+    if (!getToken()) {
+        window.location.href = 'login.html';
+    }
+}
+
+function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+}
+
+function getAuthHeaders() {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+}
 
 // Image Upload Handling
 function setupImageUpload() {
@@ -92,6 +119,11 @@ function setupFormSubmission() {
 }
 
 async function submitPrediction() {
+    if (!getToken()) {
+        alert('Please login/signup first to submit predictions.');
+        return;
+    }
+
     // Show loading
     loadingOverlay.classList.add('active');
     submitBtn.disabled = true;
@@ -100,7 +132,7 @@ async function submitPrediction() {
         // Gather form data
         const patientData = {
             patient_name: document.getElementById('patient_name').value,
-            age: parseInt(document.getElementById('age').value),
+            age_years: parseFloat(document.getElementById('age').value),
             sex: document.getElementById('sex').value,
             drug: 'Placebo',  // Always Placebo - hardcoded
             stage: parseInt(document.getElementById('stage').value),
@@ -135,9 +167,7 @@ async function submitPrediction() {
         // Make API call
         const response = await fetch(`${API_BASE_URL}/predict/full`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(requestBody)
         });
 
@@ -355,42 +385,3 @@ function displayImageAnalysis(imageAnalysis) {
     }
 }
 
-// History Search Functionality
-const searchHistoryBtn = document.getElementById('searchHistoryBtn');
-const searchNameInput = document.getElementById('search_name');
-const historyResults = document.getElementById('historyResults');
-
-searchHistoryBtn.addEventListener('click', async () => {
-    const name = searchNameInput.value.trim();
-    if (!name) return alert('Please enter a name to search');
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/predict/history/${encodeURIComponent(name)}`);
-
-        if (response.status === 404) {
-            historyResults.style.display = 'block';
-            historyResults.innerHTML = '<p>No records found for this patient.</p>';
-            return;
-        }
-
-        if (!response.ok) throw new Error('Failed to fetch history');
-
-        const records = await response.json();
-
-        historyResults.style.display = 'block';
-        historyResults.innerHTML = records.map(record => `
-            <div style="border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
-                <strong>Date:</strong> ${new Date(record.created_at + 'Z').toLocaleString()}<br>
-                <strong>Prediction:</strong> ${getStatusLabel(record.prediction)} (${(record.confidence * 100).toFixed(1)}% confidence)<br>
-                <strong>Clinical Notes:</strong> ${record.narrative ? record.narrative.substring(0, 150) + '...' : 'N/A'}
-                <details style="margin-top: 0.5rem;">
-                    <summary style="cursor: pointer; color: #0066cc;">View Full Input Data</summary>
-                    <pre style="background: #f5f5f5; padding: 0.5rem; font-size: 0.85rem; margin-top: 0.5rem;">${JSON.stringify(record.clinical_data, null, 2)}</pre>
-                </details>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        alert('Error fetching history: ' + error.message);
-    }
-});

@@ -2,6 +2,7 @@
 Pydantic models for patient data and prediction responses.
 """
 from pydantic import BaseModel, Field
+from pydantic import model_validator
 from typing import Optional, List
 from enum import Enum
 from datetime import datetime
@@ -43,9 +44,18 @@ class PatientInput(BaseModel):
     
     # Demographics
     age: float = Field(..., description="Age in days", ge=0)
+    age_years: Optional[float] = Field(None, description="Age in years (auto-converted to days)", ge=0)
     sex: SexEnum = Field(..., description="Patient sex (M/F)")
     patient_name: str = Field(..., description="Full name of the patient")
-    age: float = Field(..., description="Age in days", ge=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_age_years_to_days(cls, data):
+        if not isinstance(data, dict):
+            return data
+        if data.get("age") is None and data.get("age_years") is not None:
+            data["age"] = float(data["age_years"]) * 365.25
+        return data
 
 
     # Treatment
@@ -76,6 +86,7 @@ class PatientInput(BaseModel):
         "json_schema_extra": {
             "example": {
                 "age": 21464,
+                "age_years": 58.8,
                 "sex": "F",
                 "drug": "D-penicillamine",
                 "ascites": "Y",

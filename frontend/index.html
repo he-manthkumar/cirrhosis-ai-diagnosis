@@ -5,75 +5,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cirrhosis AI Diagnosis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        /* Responsive Grid Dashboard */
-        .dashboard-layout {
-            display: grid;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        @media (min-width: 1024px) {
-            .dashboard-layout {
-                grid-template-columns: 1fr 1.2fr;
-                /* Left form slightly smaller than right results */
-            }
-
-            /* Makes the left form sticky so it stays in view when scrolling long results */
-            .panel-left {
-                position: sticky;
-                top: 2rem;
-                height: calc(100vh - 4rem);
-                overflow-y: auto;
-                padding-right: 0.5rem;
-            }
-
-            /* Custom scrollbar for the sticky panel */
-            .panel-left::-webkit-scrollbar {
-                width: 6px;
-            }
-
-            .panel-left::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
-                border-radius: 4px;
-            }
-        }
-
-        /* Improved Search Bar Aesthetics */
-        .history-section .search-bar input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            font-family: inherit;
-            font-size: 0.95rem;
-            background-color: #f8fafc;
-            transition: all 0.2s ease;
-        }
-
-        .history-section .search-bar input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
-
-        .history-section .search-bar .submit-btn {
-            margin-top: 0;
-            padding: 0.75rem 1.5rem;
-            width: auto;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-    </style>
 </head>
 
 <body>
     <div class="container">
+        <nav class="top-nav">
+            <div class="top-nav-brand">Cirrhosis AI</div>
+            <div class="top-actions">
+                <button type="button" id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+                <button type="button" id="profileBtn" class="icon-btn" aria-label="Open profile" title="Profile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21a8 8 0 0 0-16 0"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
         <header class="header">
             <div class="logo">
                 <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -111,9 +75,9 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="age">Age (days)</label>
-                                    <input type="number" id="age" name="age" value="21464" required>
-                                    <small>Patient age in days (e.g., 21464 ≈ 58.8 years)</small>
+                                    <label for="age">Age (years)</label>
+                                    <input type="number" id="age" name="age" step="0.1" value="58.8" required>
+                                    <small>Enter age in years. Backend converts to days automatically.</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="sex">Sex</label>
@@ -266,25 +230,7 @@
 
             <div class="panel-right">
 
-                <section class="history-section">
-                    <div class="card">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                style="width: 20px; height: 20px; margin-right: 8px;">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                            Look Up Patient History
-                        </h2>
-                        <div class="search-bar" style="display: flex; gap: 1rem; align-items: center;">
-                            <input type="text" id="search_name" placeholder="Enter Patient Name to search past reports">
-                            <button type="button" id="searchHistoryBtn" class="submit-btn">Search</button>
-                        </div>
-                        <div id="historyResults" style="margin-top: 1.5rem; display: none;"></div>
-                    </div>
-                </section>
-
-                <section class="results-section" id="resultsSection" style="display: none; margin-top: 2rem;">
+                <section class="results-section" id="resultsSection" style="display: none;">
                     <div class="card result-card" id="predictionCard">
                         <h2 class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -376,10 +322,11 @@
         </div>
 
         <footer class="footer">
-            <p>Cirrhosis AI Diagnosis System • Powered by Stacked Ensemble ML + OpenAI GPT-4</p>
+            <p>© 2026 Rajalakshmi Institute of Technology. All rights reserved. Built for innovators who strive for excellence and impact.</p>
         </footer>
     </div>
 
+    <script src="theme.js"></script>
     <script src="app.js"></script>
 </body>
 

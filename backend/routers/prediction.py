@@ -18,9 +18,14 @@ from backend.models.patient import (
 from backend.services.ml_service import MLService
 from backend.services.explanation_service import ExplanationService
 from backend.services.llm_service import LLMService
+from backend.services.auth_service import get_current_user
 
 
-router = APIRouter(prefix="/predict", tags=["Prediction"])  
+router = APIRouter(
+    prefix="/predict",
+    tags=["Prediction"],
+    dependencies=[Depends(get_current_user)]
+)
 
 # Service instances (will be properly initialized with dependency injection)
 ml_service: Optional[MLService] = None

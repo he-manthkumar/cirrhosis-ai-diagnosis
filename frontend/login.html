@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Cirrhosis AI Diagnosis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="auth-top-nav">
+        <button type="button" id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </div>
+    <div class="auth-shell">
+        <div class="auth-wrap">
+            <section class="auth-hero">
+                <h1>Welcome Back</h1>
+                <p>Sign in to review liver cirrhosis prognosis, track patient risk trajectories, and generate clinically grounded explanations.</p>
+                <div class="auth-badges">
+                    <span class="auth-badge">Liver-focused risk scoring</span>
+                    <span class="auth-badge">C/CL/D prognosis classes</span>
+                    <span class="auth-badge">Decision-tree explainability</span>
+                </div>
+            </section>
+
+            <section class="auth-card">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input id="username" type="text" placeholder="Enter username">
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" placeholder="Enter password">
+                </div>
+                <div class="auth-actions">
+                    <button id="loginBtn" class="submit-btn">Login</button>
+                </div>
+                <p id="authStatus" class="auth-status"></p>
+                <p class="auth-link">
+                    New user? <a href="signup.html">Create account</a>
+                </p>
+            </section>
+        </div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="auth.js"></script>
+</body>
+
+</html>

@@ -10,13 +10,13 @@ It provides endpoints for:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import prediction_router, training_router
+from backend.routers import auth_router, prediction_router, training_router
+from backend.auth_database import auth_engine
 from backend.database import engine
-from backend.models import db_models
+from backend.models import auth_models, db_models
 
 db_models.Base.metadata.create_all(bind=engine)
-
-from backend.routers import prediction_router, training_router
+auth_models.AuthBase.metadata.create_all(bind=auth_engine)
 
 # Create FastAPI app
 app = FastAPI(
@@ -62,6 +62,7 @@ app.add_middleware(
 # Include routers
 app.include_router(prediction_router)
 app.include_router(training_router)
+app.include_router(auth_router)
 
 
 @app.get("/", tags=["Health"])
